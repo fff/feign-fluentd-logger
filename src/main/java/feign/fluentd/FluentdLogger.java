@@ -1,6 +1,5 @@
 package feign.fluentd;
 
-import com.google.common.collect.ImmutableMap;
 import feign.Logger;
 import feign.Request;
 import feign.Response;
@@ -10,6 +9,7 @@ import org.fluentd.logger.FluentLogger;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.HashMap;
 import java.util.Map;
 
 import static feign.Util.UTF_8;
@@ -18,10 +18,16 @@ import static feign.Util.decodeOrDefault;
 public class FluentdLogger extends Logger {
 
     private final FluentLogger logger;
+    private final String tagPrefix;
 
     public FluentdLogger(FluentLogger logger) {
+        this(logger, "feign");
+    }
+
+    public FluentdLogger(FluentLogger logger, String tagPrefix) {
         assert logger != null;
         this.logger = logger;
+        this.tagPrefix = tagPrefix;
     }
 
     @Override
@@ -31,11 +37,11 @@ public class FluentdLogger extends Logger {
 
     @Override
     protected void logRequest(String configKey, Level logLevel, Request request) {
-        ImmutableMap.Builder<String, Object> requestMap = ImmutableMap.builder();
+        Map<String, Object> requestMap = new HashMap<>();
         requestMap.put("method", request.httpMethod().toString());
         requestMap.put("url", request.url());
         if (logLevel.ordinal() >= Level.HEADERS.ordinal()) {
-            requestMap.put("header", request.headers());
+            requestMap.put("headers", request.headers());
 
             int bodyLength = 0;
             if (request.body() != null) {
@@ -48,16 +54,27 @@ public class FluentdLogger extends Logger {
             }
             requestMap.put("body-bytes", bodyLength);
         }
-        doLog(configKey, "request", requestMap.build());
+        doLog(configKey, "request", requestMap);
     }
 
     private void doLog(String configKey, String paramPrefix, Map<String, Object> paramValues) {
-        logger.log(configKey.substring(0, configKey.indexOf('(')), ImmutableMap.of(paramPrefix, paramValues));
+        final String[] clientAndMethod = configKey.substring(0, configKey.indexOf('(')).split("#");
+        if (clientAndMethod.length > 1) {
+            final Map<String, Object> metaMap = new HashMap<>();
+            metaMap.put("client", clientAndMethod[0]);
+            metaMap.put("method", clientAndMethod[1]);
+            paramValues.put("meta", metaMap);
+        } else {
+            final Map<String, Object> metaMap = new HashMap<>();
+            metaMap.put("method", clientAndMethod[0]);
+            paramValues.put("meta", metaMap);
+        }
+        logger.log(tagPrefix, paramPrefix, paramValues);
     }
 
     @Override
     protected void logRetry(String configKey, Level logLevel) {
-        doLog(configKey, "retry", ImmutableMap.of("key", configKey));
+        doLog(configKey, "retry", new HashMap<>());
     }
 
     @Override
@@ -67,11 +84,13 @@ public class FluentdLogger extends Logger {
                         : "";
         int status = response.status();
 
-        final ImmutableMap.Builder<String, Object> responseMap = ImmutableMap.builder();
-        responseMap.put("status", status).put("reason", reason).put("elapsedTimeMs", elapsedTime);
+        final Map<String, Object> responseMap = new HashMap<>();
+        responseMap.put("status", status);
+        responseMap.put("reason", reason);
+        responseMap.put("elapsedTimeMs", elapsedTime);
         if (logLevel.ordinal() >= Level.HEADERS.ordinal()) {
 
-            responseMap.put("header", response.headers());
+            responseMap.put("headers", response.headers());
 
             int bodyLength = 0;
             if (response.body() != null && !(status == 204 || status == 205)) {
@@ -83,26 +102,28 @@ public class FluentdLogger extends Logger {
                     responseMap.put("body", decodeOrDefault(bodyData, UTF_8, "Binary data"));
                 }
                 responseMap.put("body-bytes", bodyLength);
-                doLog(configKey, "response", responseMap.build());
+                doLog(configKey, "response", responseMap);
                 return response.toBuilder().body(bodyData).build();
             } else {
                 responseMap.put("body-bytes", bodyLength);
             }
         }
-        doLog(configKey, "response", responseMap.build());
+        doLog(configKey, "response", responseMap);
         return response;
     }
 
     @Override
     protected IOException logIOException(String configKey, Level logLevel, IOException ioe, long elapsedTime) {
-        final ImmutableMap.Builder<String, Object> exMap = ImmutableMap.builder();
-        exMap.put("name", ioe.getClass().getSimpleName()).put("message", ioe.getMessage()).put("elapsedTimeMs", elapsedTime);
+        final Map<String, Object> exMap = new HashMap<>();
+        exMap.put("name", ioe.getClass().getSimpleName());
+        exMap.put("message", ioe.getMessage());
+        exMap.put("elapsedTimeMs", elapsedTime);
         if (logLevel.ordinal() >= Level.FULL.ordinal()) {
             StringWriter sw = new StringWriter();
             ioe.printStackTrace(new PrintWriter(sw));
-            exMap.put("detail", sw.toString());
+            exMap.put("details", sw.toString());
         }
-        doLog(configKey, "exception", exMap.build());
+        doLog(configKey, "io-exception", exMap);
         return ioe;
     }
 }

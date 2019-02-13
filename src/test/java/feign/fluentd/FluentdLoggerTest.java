@@ -1,7 +1,5 @@
 package feign.fluentd;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import feign.*;
 import feign.Request.HttpMethod;
 import org.fluentd.logger.FluentLogger;
@@ -14,7 +12,9 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import static java.util.Arrays.asList;
@@ -26,7 +26,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
 public class FluentdLoggerTest {
-    private static final String CONFIG_KEY = "someMethod()";
     private static final Request REQUEST =
             new RequestTemplate().method(HttpMethod.POST.toString())
                     .append("http://api.example.com")
@@ -39,9 +38,16 @@ public class FluentdLoggerTest {
                     .status(200)
                     .reason("OK")
                     .request(Request.create(HttpMethod.GET, "/api", Collections.emptyMap(), null, Util.UTF_8))
-                    .headers(ImmutableMap.of("test", ImmutableList.of("aaa")))
+                    .headers(new HashMap<String, Collection<String>>() {{
+                        put("test", asList("aaa"));
+                    }})
                     .body("some body", Charset.forName("utf-8"))
                     .build();
+    private static final String CONFIG_KEY = "client#method()";
+    private static final HashMap<String, String> META_MAP = new HashMap<String, String>() {{
+        put("client", "client");
+        put("method", "method");
+    }};
 
     @Mock
     private FluentLogger trueLogger;
@@ -60,109 +66,116 @@ public class FluentdLoggerTest {
 
     @Test
     public void should_LogRequest_full() {
-        fluentdLogger.logRequest("test()", Logger.Level.FULL, REQUEST);
-        verify(trueLogger).log(eq("test"), captor.capture());
-        final Map<String, Object> request = (Map<String, Object>) captor.getValue().get("request");
+        fluentdLogger.logRequest(CONFIG_KEY, Logger.Level.FULL, REQUEST);
+        verify(trueLogger).log(eq("feign"), eq("request"), captor.capture());
+        final Map<String, Object> request = captor.getValue();
         assertThat(request, notNullValue());
         assertThat(request.get("url"), is("http://api.example.com"));
         assertThat(request.get("method"), is("POST"));
-        assertThat(((Map<String, Object>) request.get("header")).get("test"), is(asList("111", "222")));
+        assertThat(((Map<String, Object>) request.get("headers")).get("test"), is(asList("111", "222")));
         assertThat(request.get("body"), is("some body"));
         assertThat(request.get("body-bytes"), is(9));
+        assertThat(request.get("meta"), is(META_MAP));
     }
 
     @Test
     public void should_LogRequest_headers_only() {
-        fluentdLogger.logRequest("test()", Logger.Level.HEADERS, REQUEST);
-        verify(trueLogger).log(eq("test"), captor.capture());
-        final Map<String, Object> request = (Map<String, Object>) captor.getValue().get("request");
+        fluentdLogger.logRequest(CONFIG_KEY, Logger.Level.HEADERS, REQUEST);
+        verify(trueLogger).log(eq("feign"), eq("request"), captor.capture());
+        final Map<String, Object> request = captor.getValue();
         assertThat(request, notNullValue());
         assertThat(request.get("url"), is("http://api.example.com"));
         assertThat(request.get("method"), is("POST"));
-        assertThat(((Map<String, Object>) request.get("header")).get("test"), is(asList("111", "222")));
+        assertThat(((Map<String, Object>) request.get("headers")).get("test"), is(asList("111", "222")));
         assertThat(request.get("body"), nullValue());
         assertThat(request.get("body-bytes"), is(9));
+        assertThat(request.get("meta"), is(META_MAP));
     }
 
     @Test
     public void should_LogRequest_basics() {
-        fluentdLogger.logRequest("test()", Logger.Level.BASIC, REQUEST);
-        verify(trueLogger).log(eq("test"), captor.capture());
-        final Map<String, Object> request = (Map<String, Object>) captor.getValue().get("request");
+        fluentdLogger.logRequest(CONFIG_KEY, Logger.Level.BASIC, REQUEST);
+        verify(trueLogger).log(eq("feign"), eq("request"), captor.capture());
+        final Map<String, Object> request = captor.getValue();
         assertThat(request, notNullValue());
         assertThat(request.get("url"), is("http://api.example.com"));
         assertThat(request.get("method"), is("POST"));
         assertThat(request.get("header"), nullValue());
         assertThat(request.get("body"), nullValue());
         assertThat(request.get("body-bytes"), nullValue());
+        assertThat(request.get("meta"), is(META_MAP));
     }
 
     @Test
     public void should_LogRetry() {
-        fluentdLogger.logRetry("test()", Logger.Level.FULL);
-        verify(trueLogger).log(eq("test"), captor.capture());
-        final Map<String, Object> retry = (Map<String, Object>) captor.getValue().get("retry");
-        assertThat(retry.get("key"), is("test()"));
+        fluentdLogger.logRetry(CONFIG_KEY, Logger.Level.FULL);
+        verify(trueLogger).log(eq("feign"), eq("retry"), captor.capture());
+        assertThat(captor.getValue().get("meta"), is(META_MAP));
     }
 
     @Test
     public void should_LogAndRebufferResponse_full() throws IOException {
-        fluentdLogger.logAndRebufferResponse("test()", Logger.Level.FULL, RESPONSE, 1000L);
-        verify(trueLogger).log(eq("test"), captor.capture());
-        final Map<String, Object> response = (Map<String, Object>) captor.getValue().get("response");
+        fluentdLogger.logAndRebufferResponse(CONFIG_KEY, Logger.Level.FULL, RESPONSE, 1000L);
+        verify(trueLogger).log(eq("feign"), eq("response"), captor.capture());
+        final Map<String, Object> response = captor.getValue();
         assertThat(response.get("status"), is(200));
         assertThat(response.get("reason"), is(" OK"));
         assertThat(response.get("elapsedTimeMs"), is(1000l));
-        assertThat(((Map<String, Object>) response.get("header")).get("test"), is(asList("aaa")));
+        assertThat(((Map<String, Object>) response.get("headers")).get("test"), is(asList("aaa")));
         assertThat(response.get("body"), is("some body"));
         assertThat(response.get("body-bytes"), is(9));
+        assertThat(response.get("meta"), is(META_MAP));
     }
 
     @Test
     public void should_LogAndRebufferResponse_headers() throws IOException {
-        fluentdLogger.logAndRebufferResponse("test()", Logger.Level.HEADERS, RESPONSE, 1000L);
-        verify(trueLogger).log(eq("test"), captor.capture());
-        final Map<String, Object> response = (Map<String, Object>) captor.getValue().get("response");
+        fluentdLogger.logAndRebufferResponse(CONFIG_KEY, Logger.Level.HEADERS, RESPONSE, 1000L);
+        verify(trueLogger).log(eq("feign"), eq("response"), captor.capture());
+        final Map<String, Object> response = captor.getValue();
         assertThat(response.get("status"), is(200));
         assertThat(response.get("reason"), is(" OK"));
         assertThat(response.get("elapsedTimeMs"), is(1000l));
-        assertThat(((Map<String, Object>) response.get("header")).get("test"), is(asList("aaa")));
+        assertThat(((Map<String, Object>) response.get("headers")).get("test"), is(asList("aaa")));
         assertThat(response.get("body"), nullValue());
         assertThat(response.get("body-bytes"), is(9));
+        assertThat(response.get("meta"), is(META_MAP));
     }
 
     @Test
     public void should_LogAndRebufferResponse_basic() throws IOException {
-        fluentdLogger.logAndRebufferResponse("test()", Logger.Level.BASIC, RESPONSE, 1000L);
-        verify(trueLogger).log(eq("test"), captor.capture());
-        final Map<String, Object> response = (Map<String, Object>) captor.getValue().get("response");
+        fluentdLogger.logAndRebufferResponse(CONFIG_KEY, Logger.Level.BASIC, RESPONSE, 1000L);
+        verify(trueLogger).log(eq("feign"), eq("response"), captor.capture());
+        final Map<String, Object> response = captor.getValue();
         assertThat(response.get("status"), is(200));
         assertThat(response.get("reason"), is(" OK"));
         assertThat(response.get("elapsedTimeMs"), is(1000L));
         assertThat(response.get("header"), nullValue());
         assertThat(response.get("body"), nullValue());
         assertThat(response.get("body-bytes"), nullValue());
+        assertThat(response.get("meta"), is(META_MAP));
     }
 
     @Test
     public void should_LogIOException_full() {
-        fluentdLogger.logIOException("test()", Logger.Level.FULL, new IOException("test"), 1000L);
-        verify(trueLogger).log(eq("test"), captor.capture());
-        final Map<String, Object> exception = (Map<String, Object>) captor.getValue().get("exception");
+        fluentdLogger.logIOException(CONFIG_KEY, Logger.Level.FULL, new IOException("test"), 1000L);
+        verify(trueLogger).log(eq("feign"), eq("io-exception"), captor.capture());
+        final Map<String, Object> exception = captor.getValue();
         assertThat(exception.get("name"), is("IOException"));
         assertThat(exception.get("message"), is("test"));
-        assertThat(exception.get("detail"), notNullValue());
+        assertThat(exception.get("details"), notNullValue());
         assertThat(exception.get("elapsedTimeMs"), is(1000L));
+        assertThat(exception.get("meta"), is(META_MAP));
     }
 
     @Test
     public void should_LogIOException_non_full() {
-        fluentdLogger.logIOException("test()", Logger.Level.HEADERS, new IOException("test"), 1000L);
-        verify(trueLogger).log(eq("test"), captor.capture());
-        final Map<String, Object> exception = (Map<String, Object>) captor.getValue().get("exception");
+        fluentdLogger.logIOException(CONFIG_KEY, Logger.Level.HEADERS, new IOException("test"), 1000L);
+        verify(trueLogger).log(eq("feign"), eq("io-exception"), captor.capture());
+        final Map<String, Object> exception = captor.getValue();
         assertThat(exception.get("name"), is("IOException"));
         assertThat(exception.get("message"), is("test"));
-        assertThat(exception.get("detail"), nullValue());
+        assertThat(exception.get("details"), nullValue());
         assertThat(exception.get("elapsedTimeMs"), is(1000L));
+        assertThat(exception.get("meta"), is(META_MAP));
     }
 }
