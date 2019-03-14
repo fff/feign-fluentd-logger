@@ -17,8 +17,8 @@ import static feign.Util.decodeOrDefault;
 
 public class FluentdLogger extends Logger {
 
-    private final FluentLogger logger;
-    private final String tagPrefix;
+    protected final FluentLogger logger;
+    protected final String tagPrefix;
 
     public FluentdLogger(FluentLogger logger) {
         this(logger, "feign");
@@ -54,27 +54,29 @@ public class FluentdLogger extends Logger {
             }
             requestMap.put("body-bytes", bodyLength);
         }
-        doLog(configKey, "request", requestMap);
+        doLog(configKey, LogType.request, requestMap);
     }
 
-    private void doLog(String configKey, String paramPrefix, Map<String, Object> paramValues) {
+    protected void doLog(String configKey, LogType paramPrefix, Map<String, Object> paramValues) {
+        paramValues.put("meta", constructMetaMap(configKey));
+        logger.log(tagPrefix, paramPrefix.name(), paramValues);
+    }
+
+    Map<String, Object> constructMetaMap(String configKey) {
         final String[] clientAndMethod = configKey.substring(0, configKey.indexOf('(')).split("#");
+        final Map<String, Object> metaMap = new HashMap<>();
         if (clientAndMethod.length > 1) {
-            final Map<String, Object> metaMap = new HashMap<>();
             metaMap.put("client", clientAndMethod[0]);
             metaMap.put("method", clientAndMethod[1]);
-            paramValues.put("meta", metaMap);
         } else {
-            final Map<String, Object> metaMap = new HashMap<>();
             metaMap.put("method", clientAndMethod[0]);
-            paramValues.put("meta", metaMap);
         }
-        logger.log(tagPrefix, paramPrefix, paramValues);
+        return metaMap;
     }
 
     @Override
     protected void logRetry(String configKey, Level logLevel) {
-        doLog(configKey, "retry", new HashMap<>());
+        doLog(configKey, LogType.retry, new HashMap<>());
     }
 
     @Override
@@ -102,13 +104,13 @@ public class FluentdLogger extends Logger {
                     responseMap.put("body", decodeOrDefault(bodyData, UTF_8, "Binary data"));
                 }
                 responseMap.put("body-bytes", bodyLength);
-                doLog(configKey, "response", responseMap);
+                doLog(configKey, LogType.response, responseMap);
                 return response.toBuilder().body(bodyData).build();
             } else {
                 responseMap.put("body-bytes", bodyLength);
             }
         }
-        doLog(configKey, "response", responseMap);
+        doLog(configKey, LogType.response, responseMap);
         return response;
     }
 
@@ -123,7 +125,7 @@ public class FluentdLogger extends Logger {
             ioe.printStackTrace(new PrintWriter(sw));
             exMap.put("details", sw.toString());
         }
-        doLog(configKey, "io-exception", exMap);
+        doLog(configKey, LogType.io_exception, exMap);
         return ioe;
     }
 }

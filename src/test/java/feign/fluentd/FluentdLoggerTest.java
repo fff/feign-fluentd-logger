@@ -158,7 +158,7 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogIOException_full() {
         fluentdLogger.logIOException(CONFIG_KEY, Logger.Level.FULL, new IOException("test"), 1000L);
-        verify(trueLogger).log(eq("feign"), eq("io-exception"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("io_exception"), captor.capture());
         final Map<String, Object> exception = captor.getValue();
         assertThat(exception.get("name"), is("IOException"));
         assertThat(exception.get("message"), is("test"));
@@ -170,7 +170,7 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogIOException_non_full() {
         fluentdLogger.logIOException(CONFIG_KEY, Logger.Level.HEADERS, new IOException("test"), 1000L);
-        verify(trueLogger).log(eq("feign"), eq("io-exception"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("io_exception"), captor.capture());
         final Map<String, Object> exception = captor.getValue();
         assertThat(exception.get("name"), is("IOException"));
         assertThat(exception.get("message"), is("test"));
