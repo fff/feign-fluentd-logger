@@ -20,6 +20,7 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.notNullValue;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
@@ -67,7 +68,7 @@ public class SerializedFluentdLoggerTest {
     public void should_log_as_whole() throws IOException {
         fluentdLogger.logRequest(CONFIG_KEY, Logger.Level.FULL, REQUEST);
         fluentdLogger.logAndRebufferResponse(CONFIG_KEY, Logger.Level.FULL, RESPONSE, 100L);
-        verify(trueLogger).log(eq("feign"), captor.capture());
+        verify(trueLogger).log(eq("feign"), captor.capture(), anyLong());
         final Map<String, Object> value = captor.getValue();
         assertThat(value, notNullValue());
         final Map<String, Object> request = (Map<String, Object>) value.get("request");
@@ -81,7 +82,7 @@ public class SerializedFluentdLoggerTest {
     public void should_log_ex_with_request() {
         fluentdLogger.logRequest(CONFIG_KEY, Logger.Level.FULL, REQUEST);
         fluentdLogger.logIOException(CONFIG_KEY, Logger.Level.FULL, new IOException("test"), 100L);
-        verify(trueLogger).log(eq("feign"), captor.capture());
+        verify(trueLogger).log(eq("feign"), captor.capture(), anyLong());
         final Map<String, Object> value = captor.getValue();
         assertThat(value, notNullValue());
         final Map<String, Object> request = (Map<String, Object>) value.get("request");
@@ -96,7 +97,7 @@ public class SerializedFluentdLoggerTest {
         fluentdLogger.logRetry(CONFIG_KEY, Logger.Level.FULL);
         fluentdLogger.logRetry(CONFIG_KEY, Logger.Level.FULL);
         fluentdLogger.logIOException(CONFIG_KEY, Logger.Level.FULL, new IOException(""), 111L);
-        verify(trueLogger).log(eq("feign"), captor.capture());
+        verify(trueLogger).log(eq("feign"), captor.capture(), anyLong());
         final Map<String, Object> value = captor.getValue();
         assertThat(value, notNullValue());
         final Map<String, Object> retry = (Map<String, Object>) value.get("retry");
@@ -111,7 +112,7 @@ public class SerializedFluentdLoggerTest {
         fluentdLogger.logRetry(CONFIG_KEY, Logger.Level.FULL);
         fluentdLogger.logRequest(CONFIG_KEY, Logger.Level.FULL, REQUEST);
         fluentdLogger.logIOException(CONFIG_KEY, Logger.Level.FULL, new IOException(""), 111L);
-        verify(trueLogger).log(eq("feign"), captor.capture());
+        verify(trueLogger).log(eq("feign"), captor.capture(), anyLong());
         final Map<String, Object> value = captor.getValue();
         assertThat(value, notNullValue());
         final Map<String, Object> dirty = (Map<String, Object>) value.get("dirty_context");

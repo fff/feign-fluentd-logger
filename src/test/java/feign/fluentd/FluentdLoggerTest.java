@@ -22,6 +22,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
@@ -67,7 +68,7 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogRequest_full() {
         fluentdLogger.logRequest(CONFIG_KEY, Logger.Level.FULL, REQUEST);
-        verify(trueLogger).log(eq("feign"), eq("request"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("request"), captor.capture(), anyLong());
         final Map<String, Object> request = captor.getValue();
         assertThat(request, notNullValue());
         assertThat(request.get("url"), is("http://api.example.com"));
@@ -81,7 +82,7 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogRequest_headers_only() {
         fluentdLogger.logRequest(CONFIG_KEY, Logger.Level.HEADERS, REQUEST);
-        verify(trueLogger).log(eq("feign"), eq("request"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("request"), captor.capture(), anyLong());
         final Map<String, Object> request = captor.getValue();
         assertThat(request, notNullValue());
         assertThat(request.get("url"), is("http://api.example.com"));
@@ -95,7 +96,7 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogRequest_basics() {
         fluentdLogger.logRequest(CONFIG_KEY, Logger.Level.BASIC, REQUEST);
-        verify(trueLogger).log(eq("feign"), eq("request"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("request"), captor.capture(), anyLong());
         final Map<String, Object> request = captor.getValue();
         assertThat(request, notNullValue());
         assertThat(request.get("url"), is("http://api.example.com"));
@@ -109,14 +110,14 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogRetry() {
         fluentdLogger.logRetry(CONFIG_KEY, Logger.Level.FULL);
-        verify(trueLogger).log(eq("feign"), eq("retry"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("retry"), captor.capture(), anyLong());
         assertThat(captor.getValue().get("meta"), is(META_MAP));
     }
 
     @Test
     public void should_LogAndRebufferResponse_full() throws IOException {
         fluentdLogger.logAndRebufferResponse(CONFIG_KEY, Logger.Level.FULL, RESPONSE, 1000L);
-        verify(trueLogger).log(eq("feign"), eq("response"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("response"), captor.capture(), anyLong());
         final Map<String, Object> response = captor.getValue();
         assertThat(response.get("status"), is(200));
         assertThat(response.get("reason"), is(" OK"));
@@ -130,7 +131,7 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogAndRebufferResponse_headers() throws IOException {
         fluentdLogger.logAndRebufferResponse(CONFIG_KEY, Logger.Level.HEADERS, RESPONSE, 1000L);
-        verify(trueLogger).log(eq("feign"), eq("response"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("response"), captor.capture(), anyLong());
         final Map<String, Object> response = captor.getValue();
         assertThat(response.get("status"), is(200));
         assertThat(response.get("reason"), is(" OK"));
@@ -144,7 +145,7 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogAndRebufferResponse_basic() throws IOException {
         fluentdLogger.logAndRebufferResponse(CONFIG_KEY, Logger.Level.BASIC, RESPONSE, 1000L);
-        verify(trueLogger).log(eq("feign"), eq("response"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("response"), captor.capture(), anyLong());
         final Map<String, Object> response = captor.getValue();
         assertThat(response.get("status"), is(200));
         assertThat(response.get("reason"), is(" OK"));
@@ -158,7 +159,7 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogIOException_full() {
         fluentdLogger.logIOException(CONFIG_KEY, Logger.Level.FULL, new IOException("test"), 1000L);
-        verify(trueLogger).log(eq("feign"), eq("io_exception"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("io_exception"), captor.capture(), anyLong());
         final Map<String, Object> exception = captor.getValue();
         assertThat(exception.get("name"), is("IOException"));
         assertThat(exception.get("message"), is("test"));
@@ -170,7 +171,7 @@ public class FluentdLoggerTest {
     @Test
     public void should_LogIOException_non_full() {
         fluentdLogger.logIOException(CONFIG_KEY, Logger.Level.HEADERS, new IOException("test"), 1000L);
-        verify(trueLogger).log(eq("feign"), eq("io_exception"), captor.capture());
+        verify(trueLogger).log(eq("feign"), eq("io_exception"), captor.capture(), anyLong());
         final Map<String, Object> exception = captor.getValue();
         assertThat(exception.get("name"), is("IOException"));
         assertThat(exception.get("message"), is("test"));
