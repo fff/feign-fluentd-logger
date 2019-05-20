@@ -39,7 +39,7 @@ public class SerializedFluentdLogger extends FluentdLogger {
 
         if (paramPrefix.isFinalStep) {
             queueMap.put(LogType.meta_data, constructMetaMap(configKey));
-            logger.log(tagPrefix, toStringMap(queueMap), System.currentTimeMillis());
+            logger.log(tagPrefix, toStringMap(queueMap), System.currentTimeMillis() / 1000);
             logQueue.remove();
         }
     }
