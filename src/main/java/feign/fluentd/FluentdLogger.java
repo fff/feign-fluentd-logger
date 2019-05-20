@@ -59,7 +59,7 @@ public class FluentdLogger extends Logger {
 
     protected void doLog(String configKey, LogType paramPrefix, Map<String, Object> paramValues) {
         paramValues.put("meta", constructMetaMap(configKey));
-        logger.log(tagPrefix, paramPrefix.name(), paramValues);
+        logger.log(tagPrefix, paramPrefix.name(), paramValues, System.currentTimeMillis());
     }
 
     Map<String, Object> constructMetaMap(String configKey) {
