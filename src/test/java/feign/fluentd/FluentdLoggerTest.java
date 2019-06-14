@@ -71,7 +71,7 @@ public class FluentdLoggerTest {
         verify(trueLogger).log(eq("feign"), eq("request"), captor.capture(), anyLong());
         final Map<String, Object> request = captor.getValue();
         assertThat(request, notNullValue());
-        assertThat(request.get("url"), is("http://api.example.com"));
+        assertThat(((Map<String, Object>) request.get("uri")).get("host"), is("api.example.com"));
         assertThat(request.get("method"), is("POST"));
         assertThat(((Map<String, Object>) request.get("headers")).get("test"), is(asList("111", "222")));
         assertThat(request.get("body"), is("some body"));
@@ -85,7 +85,7 @@ public class FluentdLoggerTest {
         verify(trueLogger).log(eq("feign"), eq("request"), captor.capture(), anyLong());
         final Map<String, Object> request = captor.getValue();
         assertThat(request, notNullValue());
-        assertThat(request.get("url"), is("http://api.example.com"));
+        assertThat(((Map<String, Object>) request.get("uri")).get("host"), is("api.example.com"));
         assertThat(request.get("method"), is("POST"));
         assertThat(((Map<String, Object>) request.get("headers")).get("test"), is(asList("111", "222")));
         assertThat(request.get("body"), nullValue());
@@ -99,7 +99,7 @@ public class FluentdLoggerTest {
         verify(trueLogger).log(eq("feign"), eq("request"), captor.capture(), anyLong());
         final Map<String, Object> request = captor.getValue();
         assertThat(request, notNullValue());
-        assertThat(request.get("url"), is("http://api.example.com"));
+        assertThat(((Map<String, Object>) request.get("uri")).get("host"), is("api.example.com"));
         assertThat(request.get("method"), is("POST"));
         assertThat(request.get("header"), nullValue());
         assertThat(request.get("body"), nullValue());

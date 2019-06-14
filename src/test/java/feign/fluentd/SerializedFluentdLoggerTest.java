@@ -72,7 +72,8 @@ public class SerializedFluentdLoggerTest {
         final Map<String, Object> value = captor.getValue();
         assertThat(value, notNullValue());
         final Map<String, Object> request = (Map<String, Object>) value.get("request");
-        assertThat(request.get("url"), is("http://api.example.com"));
+        assertThat(((Map<String, Object>) request.get("uri")).get("host"), is("api.example.com"));
+        assertThat(((Map<String, Object>) request.get("uri")).get("scheme"), is("http"));
         final Map<String, Object> response = (Map<String, Object>) value.get("response");
         assertThat(response.get("elapsedTimeMs"), is(100L));
         assertThat(value.get("meta_data"), is(META_MAP));
@@ -86,7 +87,7 @@ public class SerializedFluentdLoggerTest {
         final Map<String, Object> value = captor.getValue();
         assertThat(value, notNullValue());
         final Map<String, Object> request = (Map<String, Object>) value.get("request");
-        assertThat(request.get("url"), is("http://api.example.com"));
+        assertThat(((Map<String, Object>) request.get("uri")).get("host"), is("api.example.com"));
         final Map<String, Object> exception = (Map<String, Object>) value.get("io_exception");
         assertThat(exception.get("elapsedTimeMs"), is(100L));
         assertThat(value.get("meta_data"), is(META_MAP));
