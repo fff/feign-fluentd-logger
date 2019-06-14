@@ -9,6 +9,8 @@ import org.fluentd.logger.FluentLogger;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,7 +41,18 @@ public class FluentdLogger extends Logger {
     protected void logRequest(String configKey, Level logLevel, Request request) {
         Map<String, Object> requestMap = new HashMap<>();
         requestMap.put("method", request.httpMethod().toString());
-        requestMap.put("url", request.url());
+        try {
+            final HashMap<Object, Object> uriMap = new HashMap<>();
+            final URI uriObj = new URI(request.url());
+            uriMap.put("host", uriObj.getHost());
+            uriMap.put("path", uriObj.getPath());
+            uriMap.put("port", uriObj.getPort());
+            uriMap.put("scheme", uriObj.getScheme());
+            uriMap.put("query", uriObj.getQuery());
+            requestMap.put("uri", uriMap);
+        } catch (URISyntaxException e) {
+            requestMap.put("url", request.url());
+        }
         if (logLevel.ordinal() >= Level.HEADERS.ordinal()) {
             requestMap.put("headers", request.headers());
 
